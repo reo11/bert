@@ -164,12 +164,14 @@ class FullTokenizer(object):
   def __init__(self, vocab_file, do_lower_case=True):
     self.vocab = load_vocab(vocab_file)
     self.inv_vocab = {v: k for k, v in self.vocab.items()}
-    self.basic_tokenizer = BasicTokenizer(do_lower_case=do_lower_case)
+    # self.basic_tokenizer = BasicTokenizer(do_lower_case=do_lower_case)
+    self.jumanpp_tokenizer = JumanPPTokenizer()
     self.wordpiece_tokenizer = WordpieceTokenizer(vocab=self.vocab)
 
   def tokenize(self, text):
     split_tokens = []
-    for token in self.basic_tokenizer.tokenize(text):
+    # for token in self.basic_tokenizer.tokenize(text):
+    for token in self.jumanpp_tokenizer.tokenize(text):
       for sub_token in self.wordpiece_tokenizer.tokenize(token):
         split_tokens.append(sub_token)
 
@@ -397,3 +399,27 @@ def _is_punctuation(char):
   if cat.startswith("P"):
     return True
   return False
+
+
+class JumanPPTokenizer(BasicTokenizer):
+  def __init__(self):
+    """Constructs a BasicTokenizer.
+    """
+    from pyknp import Juman
+ 
+    self.do_lower_case = False
+    self._jumanpp = Juman()
+ 
+  def tokenize(self, text):
+    """Tokenizes a piece of text."""
+    text = convert_to_unicode(text.replace(' ', ''))
+    text = self._clean_text(text)
+ 
+    juman_result = self._jumanpp.analysis(text)
+    split_tokens = []
+    for mrph in juman_result.mrph_list():
+      split_tokens.extend(self._run_split_on_punc(mrph.midasi))
+ 
+    output_tokens = whitespace_tokenize(" ".join(split_tokens))
+    print(split_tokens)
+    return output_tokens
